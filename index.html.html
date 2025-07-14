@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Task Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .kanban-card { transition: transform 0.2s; }
+        .kanban-card:hover { transform: translateY(-2px); }
+        .pomodoro-timer { font-family: 'Courier New', monospace; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+        .calendar-day { aspect-ratio: 1; }
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+        .urgent { background-color: #fef2f2; }
+        .not-urgent { background-color: #f0f9ff; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">タスクスケジューラアプリ</h1>
+            <p class="text-gray-600">アイゼンハワーマトリックス、ポモドーロタイマー、Googleカレンダー統合を備えたスマートタスク管理アプリ</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap justify-center mb-6 border-b">
+            <button class="tab-btn px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt mr-2"></i>ダッシュボード
+            </button>
+            <button class="tab-btn px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="matrix">
+                <i class="fas fa-th mr-2"></i>マトリックス
+            </button>
+            <button class="tab-btn px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="kanban">
+                <i class="fas fa-columns mr-2"></i>カンバン
+            </button>
+            <button class="tab-btn px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="pomodoro">
+                <i class="fas fa-clock mr-2"></i>ポモドーロ
+            </button>
+            <button class="tab-btn px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="calendar">
+                <i class="fas fa-calendar mr-2"></i>カレンダー
+            </button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-plus-circle text-green-500 mr-2"></i>新しいタスク作成
+                </h2>
+                <form id="taskForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">タスク名 *</label>
+                        <input type="text" id="taskName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="タスクを入力してください" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">説明</label>
+                        <textarea id="taskDescription" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="詳細説明（任意）" rows="3"></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">実行日</label>
+                            <input type="date" id="taskDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">時間</label>
+                            <input type="time" id="taskTime" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">重要度</label>
+                            <select id="taskImportance" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="high">高</option>
+                                <option value="medium" selected>中</option>
+                                <option value="low">低</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">緊急度</label>
+                            <select id="taskUrgency" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="high">高</option>
+                                <option value="medium" selected>中</option>
+                                <option value="low">低</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200">
+                        <i class="fas fa-plus mr-2"></i>タスクを追加
+                    </button>
+                </form>
+            </div>
+
+            <!-- Export Functions -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-semibold mb-4">
+                    <i class="fas fa-download text-blue-500 mr-2"></i>Googleカレンダーエクスポート
+                </h3>
+                <div class="flex space-x-4">
+                    <button id="exportCSV" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition duration-200">
+                        <i class="fas fa-file-csv mr-2"></i>CSV形式でダウンロード
+                    </button>
+                    <button id="exportICS" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-200">
+                        <i class="fas fa-calendar-alt mr-2"></i>ICS形式でダウンロード
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Overview -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold mb-4">
+                    <i class="fas fa-chart-pie text-purple-500 mr-2"></i>進捗状況
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-blue-600" id="totalTasks">0</div>
+                        <div class="text-sm text-gray-600">総タスク数</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-green-600" id="completedTasks">0</div>
+                        <div class="text-sm text-gray-600">完了済み</div>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-orange-600" id="pendingTasks">0</div>
+                        <div class="text-sm text-gray-600">未完了</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Eisenhower Matrix Tab -->
+        <div id="matrix" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-red-800 mb-4">重要 + 緊急</h3>
+                    <div class="text-sm text-red-600 mb-2">今すぐ実行</div>
+                    <div id="matrix-urgent-important" class="space-y-2"></div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-blue-800 mb-4">重要 + 緊急でない</h3>
+                    <div class="text-sm text-blue-600 mb-2">計画して実行</div>
+                    <div id="matrix-not-urgent-important" class="space-y-2"></div>
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-yellow-800 mb-4">緊急 + 重要でない</h3>
+                    <div class="text-sm text-yellow-600 mb-2">委任</div>
+                    <div id="matrix-urgent-not-important" class="space-y-2"></div>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">緊急でない + 重要でない</h3>
+                    <div class="text-sm text-gray-600 mb-2">削除</div>
+                    <div id="matrix-not-urgent-not-important" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kanban Tab -->
+        <div id="kanban" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-list text-blue-500 mr-2"></i>未着手
+                    </h3>
+                    <div id="kanban-todo" class="space-y-2 min-h-32"></div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-play text-yellow-500 mr-2"></i>進行中
+                    </h3>
+                    <div id="kanban-doing" class="space-y-2 min-h-32"></div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-check text-green-500 mr-2"></i>完了
+                    </h3>
+                    <div id="kanban-done" class="space-y-2 min-h-32"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pomodoro Tab -->
+        <div id="pomodoro" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-tomato text-red-500 mr-2"></i>ポモドーロタイマー
+                </h3>
+                <div class="pomodoro-timer text-6xl font-bold text-gray-800 mb-6" id="pomodoroDisplay">25:00</div>
+                <div class="text-lg text-gray-600 mb-6" id="pomodoroPhase">作業時間</div>
+                <div class="flex justify-center space-x-4 mb-6">
+                    <button id="pomodoroStart" class="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition duration-200">
+                        <i class="fas fa-play mr-2"></i>開始
+                    </button>
+                    <button id="pomodoroPause" class="bg-yellow-500 text-white px-6 py-3 rounded-md hover:bg-yellow-600 transition duration-200">
+                        <i class="fas fa-pause mr-2"></i>一時停止
+                    </button>
+                    <button id="pomodoroReset" class="bg-red-500 text-white px-6 py-3 rounded-md hover:bg-red-600 transition duration-200">
+                        <i class="fas fa-stop mr-2"></i>リセット
+                    </button>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <div>セッション: <span id="pomodoroSessions">0</span> / 4</div>
+                    <div>今日の完了セッション: <span id="todaySessions">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Tab -->
+        <div id="calendar" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-calendar text-blue-500 mr-2"></i>カレンダー
+                    </h3>
+                    <div class="flex space-x-2">
+                        <button class="calendar-view-btn bg-blue-500 text-white px-3 py-1 rounded text-sm" data-view="day">日</button>
+                        <button class="calendar-view-btn bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm" data-view="week">週間</button>
+                        <button class="calendar-view-btn bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm" data-view="month">月</button>
+                        <button class="calendar-view-btn bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm" data-view="year">年間</button>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                    <button id="prevPeriod" class="bg-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-400">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h4 id="currentPeriod" class="text-lg font-semibold text-gray-800"></h4>
+                    <button id="nextPeriod" class="bg-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-400">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div id="calendarContent" class="min-h-96"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let currentView = 'day';
+        let currentDate = new Date();
+        let pomodoroTimer = null;
+        let pomodoroTime = 25 * 60; // 25 minutes in seconds
+        let isWorking = true;
+        let pomodoroSessions = 0;
+        let todaySessions = parseInt(localStorage.getItem('todaySessions')) || 0;
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTabs();
+            initializeTaskForm();
+            initializePomodoro();
+            initializeCalendar();
+            initializeExport();
+            updateUI();
+        });
+
+        // Tab functionality
+        function initializeTabs() {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const targetTab = this.dataset.tab;
+                    
+                    // Remove active class from all tabs and buttons
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.querySelectorAll('.tab-btn').forEach(button => {
+                        button.classList.remove('border-blue-500', 'text-blue-600');
+                        button.classList.add('border-transparent', 'text-gray-500');
+                    });
+                    
+                    // Add active class to current tab and button
+                    document.getElementById(targetTab).classList.add('active');
+                    this.classList.add('border-blue-500', 'text-blue-600');
+                    this.classList.remove('border-transparent', 'text-gray-500');
+                    
+                    // Update specific views
+                    if (targetTab === 'matrix') updateMatrix();
+                    if (targetTab === 'kanban') updateKanban();
+                    if (targetTab === 'calendar') updateCalendar();
+                });
+            });
+        }
+
+        // Task form functionality
+        function initializeTaskForm() {
+            const form = document.getElementById('taskForm');
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const task = {
+                    id: Date.now(),
+                    name: document.getElementById('taskName').value,
+                    description: document.getElementById('taskDescription').value,
+                    date: document.getElementById('taskDate').value,
+                    time: document.getElementById('taskTime').value,
+                    importance: document.getElementById('taskImportance').value,
+                    urgency: document.getElementById('taskUrgency').value,
+                    status: 'todo',
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                tasks.push(task);
+                saveTasks();
+                updateUI();
+                form.reset();
+                
+                // Show success message
+                showNotification('タスクが追加されました！', 'success');
+            });
+        }
+
+        // Pomodoro functionality
+        function initializePomodoro() {
+            document.getElementById('pomodoroStart').addEventListener('click', startPomodoro);
+            document.getElementById('pomodoroPause').addEventListener('click', pausePomodoro);
+            document.getElementById('pomodoroReset').addEventListener('click', resetPomodoro);
+            
+            updatePomodoroDisplay();
+            document.getElementById('todaySessions').textContent = todaySessions;
+        }
+
+        function startPomodoro() {
+            if (pomodoroTimer) return;
+            
+            pomodoroTimer = setInterval(() => {
+                pomodoroTime--;
+                updatePomodoroDisplay();
+                
+                if (pomodoroTime <= 0) {
+                    clearInterval(pomodoroTimer);
+                    pomodoroTimer = null;
+                    
+                    if (isWorking) {
+                        pomodoroSessions++;
+                        todaySessions++;
+                        localStorage.setItem('todaySessions', todaySessions);
+                        document.getElementById('todaySessions').textContent = todaySessions;
+                        
+                        if (pomodoroSessions >= 4) {
+                            pomodoroTime = 30 * 60; // Long break
+                            pomodoroSessions = 0;
+                            showNotification('長休憩時間です！', 'info');
+                        } else {
+                            pomodoroTime = 5 * 60; // Short break
+                            showNotification('休憩時間です！', 'info');
+                        }
+                    } else {
+                        pomodoroTime = 25 * 60; // Work time
+                        showNotification('作業時間です！', 'info');
+                    }
+                    
+                    isWorking = !isWorking;
+                    document.getElementById('pomodoroPhase').textContent = isWorking ? '作業時間' : '休憩時間';
+                    document.getElementById('pomodoroSessions').textContent = pomodoroSessions;
+                }
+            }, 1000);
+        }
+
+        function pausePomodoro() {
+            if (pomodoroTimer) {
+                clearInterval(pomodoroTimer);
+                pomodoroTimer = null;
+            }
+        }
+
+        function resetPomodoro() {
+            clearInterval(pomodoroTimer);
+            pomodoroTimer = null;
+            pomodoroTime = 25 * 60;
+            isWorking = true;
+            document.getElementById('pomodoroPhase').textContent = '作業時間';
+            updatePomodoroDisplay();
+        }
+
+        function updatePomodoroDisplay() {
+            const minutes = Math.floor(pomodoroTime / 60);
+            const seconds = pomodoroTime % 60;
+            document.getElementById('pomodoroDisplay').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Calendar functionality
+        function initializeCalendar() {
+            const viewBtns = document.querySelectorAll('.calendar-view-btn');
+            viewBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentView = this.dataset.view;
+                    
+                    // Update button styles
+                    viewBtns.forEach(b => {
+                        b.classList.remove('bg-blue-500', 'text-white');
+                        b.classList.add('bg-gray-300', 'text-gray-700');
+                    });
+                    this.classList.add('bg-blue-500', 'text-white');
+                    this.classList.remove('bg-gray-300', 'text-gray-700');
+                    
+                    updateCalendar();
+                });
+            });
+            
+            document.getElementById('prevPeriod').addEventListener('click', () => {
+                navigateCalendar(-1);
+            });
+            
+            document.getElementById('nextPeriod').addEventListener('click', () => {
+                navigateCalendar(1);
+            });
+            
+            updateCalendar();
+        }
+
+        function navigateCalendar(direction) {
+            const date = new Date(currentDate);
+            
+            switch(currentView) {
+                case 'day':
+                    date.setDate(date.getDate() + direction);
+                    break;
+                case 'week':
+                    date.setDate(date.getDate() + (direction * 7));
+                    break;
+                case 'month':
+                    date.setMonth(date.getMonth() + direction);
+                    break;
+                case 'year':
+                    date.setFullYear(date.getFullYear() + direction);
+                    break;
+            }
+            
+            currentDate = date;
+            updateCalendar();
+        }
+
+        function updateCalendar() {
+            const content = document.getElementById('calendarContent');
+            const period = document.getElementById('currentPeriod');
+            
+            switch(currentView) {
+                case 'day':
+                    renderDayView(content, period);
+                    break;
+                case 'week':
+                    renderWeekView(content, period);
+                    break;
+                case 'month':
+                    renderMonthView(content, period);
+                    break;
+                case 'year':
+                    renderYearView(content, period);
+                    break;
+            }
+        }
+
+        function renderDayView(content, period) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const dayTasks = tasks.filter(task => task.date === dateStr);
+            
+            period.textContent = `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月${currentDate.getDate()}日`;
+            
+            let html = `<div class="space-y-2">`;
+            
+            if (dayTasks.length === 0) {
+                html += `<p class="text-gray-500 text-center py-8">この日に予定はありません</p>`;
+            } else {
+                dayTasks.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+                dayTasks.forEach(task => {
+                    const timeStr = task.time ? task.time : '時間未設定';
+                    const priority = task.importance === 'high' ? 'priority-high' : 
+                                   task.importance === 'medium' ? 'priority-medium' : 'priority-low';
+                    
+                    html += `
+                        <div class="bg-white p-3 rounded-lg shadow-sm border ${priority}">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-clock text-gray-500 mr-2"></i>
+                                        <span class="text-sm text-gray-600">${timeStr}</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-800 mt-1">${task.name}</h4>
+                                    ${task.description ? `<p class="text-sm text-gray-600 mt-1">${task.description}</p>` : ''}
+                                </div>
+                                <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                                       onchange="toggleTask(${task.id})" class="ml-2">
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += `</div>`;
+            content.innerHTML = html;
+        }
+
+        function renderWeekView(content, period) {
+            const startOfWeek = new Date(currentDate);
+            startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            
+            period.textContent = `${startOfWeek.getFullYear()}年${startOfWeek.getMonth() + 1}月${startOfWeek.getDate()}日 - ${endOfWeek.getMonth() + 1}月${endOfWeek.getDate()}日`;
+            
+            let html = `<div class="grid grid-cols-7 gap-2">`;
+            
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(startOfWeek);
+                day.setDate(startOfWeek.getDate() + i);
+                const dateStr = day.toISOString().split('T')[0];
+                const dayTasks = tasks.filter(task => task.date === dateStr);
+                
+                html += `
+                    <div class="bg-white p-2 rounded-lg shadow-sm">
+                        <div class="text-center font-medium text-gray-700 mb-2">
+                            ${days[i]}<br>${day.getDate()}
+                        </div>
+                        <div class="space-y-1">
+                `;
+                
+                dayTasks.forEach(task => {
+                    const priority = task.importance === 'high' ? 'bg-red-100' : 
+                                   task.importance === 'medium' ? 'bg-yellow-100' : 'bg-green-100';
+                    html += `
+                        <div class="text-xs p-1 rounded ${priority}">
+                            ${task.time || ''} ${task.name}
+                        </div>
+                    `;
+                });
+                
+                html += `</div></div>`;
+            }
+            
+            html += `</div>`;
+            content.innerHTML = html;
+        }
+
+        function renderMonthView(content, period) {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            period.textContent = `${year}年${month + 1}月`;
+            
+            let html = `
+                <div class="calendar-grid">
+                    <div class="text-center font-medium text-gray-700 py-2">日</div>
+                    <div class="text-center font-medium text-gray-700 py-2">月</div>
+                    <div class="text-center font-medium text-gray-700 py-2">火</div>
+                    <div class="text-center font-medium text-gray-700 py-2">水</div>
+                    <div class="text-center font-medium text-gray-700 py-2">木</div>
+                    <div class="text-center font-medium text-gray-700 py-2">金</div>
+                    <div class="text-center font-medium text-gray-700 py-2">土</div>
+            `;
+            
+            const currentMonth = month;
+            for (let i = 0; i < 42; i++) {
+                const day = new Date(startDate);
+                day.setDate(startDate.getDate() + i);
+                const dateStr = day.toISOString().split('T')[0];
+                const dayTasks = tasks.filter(task => task.date === dateStr);
+                const isCurrentMonth = day.getMonth() === currentMonth;
+                
+                html += `
+                    <div class="calendar-day border bg-white p-1 ${isCurrentMonth ? '' : 'bg-gray-50 text-gray-400'}">
+                        <div class="text-sm font-medium">${day.getDate()}</div>
+                        <div class="text-xs">
+                            ${dayTasks.length > 0 ? `<span class="bg-blue-100 text-blue-800 px-1 rounded">${dayTasks.length}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `</div>`;
+            content.innerHTML = html;
+        }
+
+        function renderYearView(content, period) {
+            const year = currentDate.getFullYear();
+            period.textContent = `${year}年`;
+            
+            let html = `<div class="grid grid-cols-3 gap-4">`;
+            
+            for (let month = 0; month < 12; month++) {
+                const monthTasks = tasks.filter(task => {
+                    if (!task.date) return false;
+                    const taskDate = new Date(task.date);
+                    return taskDate.getFullYear() === year && taskDate.getMonth() === month;
+                });
+                
+                html += `
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="text-center font-medium text-gray-700 mb-2">${month + 1}月</div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">${monthTasks.length}</div>
+                            <div class="text-xs text-gray-500">タスク</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `</div>`;
+            content.innerHTML = html;
+        }
+
+        // Export functionality
+        function initializeExport() {
+            document.getElementById('exportCSV').addEventListener('click', exportCSV);
+            document.getElementById('exportICS').addEventListener('click', exportICS);
+        }
+
+        function exportCSV() {
+            const csvContent = generateCSV();
+            downloadFile(csvContent, 'tasks.csv', 'text/csv');
+            showNotification('CSV形式でエクスポートしました', 'success');
+        }
+
+        function exportICS() {
+            const icsContent = generateICS();
+            downloadFile(icsContent, 'tasks.ics', 'text/calendar');
+            showNotification('ICS形式でエクスポートしました', 'success');
+        }
+
+        function generateCSV() {
+            const headers = ['Subject', 'Start Date', 'Start Time', 'Description', 'Priority'];
+            const rows = tasks.map(task => [
+                task.name,
+                task.date || '',
+                task.time || '',
+                task.description || '',
+                task.importance || ''
+            ]);
+            
+            return [headers, ...rows].map(row => 
+                row.map(field => `"${field}"`).join(',')
+            ).join('\n');
+        }
+
+        function generateICS() {
+            const now = new Date();
+            const dateStr = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            
+            let ics = 'BEGIN:VCALENDAR\n';
+            ics += 'VERSION:2.0\n';
+            ics += 'PRODID:-//Smart Task Manager//EN\n';
+            
+            tasks.forEach(task => {
+                if (task.date) {
+                    const startDate = new Date(task.date + 'T' + (task.time || '09:00'));
+                    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour later
+                    
+                    ics += 'BEGIN:VEVENT\n';
+                    ics += `UID:${task.id}@smart-task-manager\n`;
+                    ics += `DTSTAMP:${dateStr}\n`;
+                    ics += `DTSTART:${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z\n`;
+                    ics += `DTEND:${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z\n`;
+                    ics += `SUMMARY:${task.name}\n`;
+                    ics += `DESCRIPTION:${task.description || ''}\n`;
+                    ics += `PRIORITY:${task.importance === 'high' ? '1' : task.importance === 'medium' ? '5' : '9'}\n`;
+                    ics += 'END:VEVENT\n';
+                }
+            });
+            
+            ics += 'END:VCALENDAR';
+            return ics;
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Matrix functionality
+        function updateMatrix() {
+            const containers = {
+                'urgent-important': document.getElementById('matrix-urgent-important'),
+                'not-urgent-important': document.getElementById('matrix-not-urgent-important'),
+                'urgent-not-important': document.getElementById('matrix-urgent-not-important'),
+                'not-urgent-not-important': document.getElementById('matrix-not-urgent-not-important')
+            };
+            
+            // Clear containers
+            Object.values(containers).forEach(container => container.innerHTML = '');
+            
+            tasks.forEach(task => {
+                const isUrgent = task.urgency === 'high';
+                const isImportant = task.importance === 'high';
+                
+                let containerId;
+                if (isUrgent && isImportant) {
+                    containerId = 'urgent-important';
+                } else if (!isUrgent && isImportant) {
+                    containerId = 'not-urgent-important';
+                } else if (isUrgent && !isImportant) {
+                    containerId = 'urgent-not-important';
+                } else {
+                    containerId = 'not-urgent-not-important';
+                }
+                
+                const taskElement = createTaskCard(task);
+                containers[containerId].appendChild(taskElement);
+            });
+        }
+
+        // Kanban functionality
+        function updateKanban() {
+            const containers = {
+                'todo': document.getElementById('kanban-todo'),
+                'doing': document.getElementById('kanban-doing'),
+                'done': document.getElementById('kanban-done')
+            };
+            
+            // Clear containers
+            Object.values(containers).forEach(container => container.innerHTML = '');
+            
+            tasks.forEach(task => {
+                const status = task.completed ? 'done' : task.status || 'todo';
+                const taskElement = createKanbanCard(task);
+                containers[status].appendChild(taskElement);
+            });
+        }
+
+        function createTaskCard(task) {
+            const div = document.createElement('div');
+            div.className = 'bg-white p-3 rounded-lg shadow-sm border-l-4 border-blue-500';
+            div.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <h4 class="font-medium text-gray-800">${task.name}</h4>
+                        ${task.description ? `<p class="text-sm text-gray-600 mt-1">${task.description}</p>` : ''}
+                        <div class="text-xs text-gray-500 mt-2">
+                            ${task.date ? `<i class="fas fa-calendar mr-1"></i>${task.date}` : ''}
+                            ${task.time ? `<i class="fas fa-clock mr-1 ml-2"></i>${task.time}` : ''}
+                        </div>
+                    </div>
+                    <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                           onchange="toggleTask(${task.id})" class="ml-2">
+                </div>
+            `;
+            return div;
+        }
+
+        function createKanbanCard(task) {
+            const div = document.createElement('div');
+            div.className = 'kanban-card bg-gray-50 p-3 rounded-lg shadow-sm cursor-pointer';
+            div.innerHTML = `
+                <h4 class="font-medium text-gray-800">${task.name}</h4>
+                ${task.description ? `<p class="text-sm text-gray-600 mt-1">${task.description}</p>` : ''}
+                <div class="text-xs text-gray-500 mt-2">
+                    ${task.date ? `<i class="fas fa-calendar mr-1"></i>${task.date}` : ''}
+                    ${task.time ? `<i class="fas fa-clock mr-1 ml-2"></i>${task.time}` : ''}
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <div class="flex space-x-1">
+                        <button onclick="moveTask(${task.id}, 'todo')" class="text-xs bg-blue-500 text-white px-2 py-1 rounded">未着手</button>
+                        <button onclick="moveTask(${task.id}, 'doing')" class="text-xs bg-yellow-500 text-white px-2 py-1 rounded">進行中</button>
+                        <button onclick="moveTask(${task.id}, 'done')" class="text-xs bg-green-500 text-white px-2 py-1 rounded">完了</button>
+                    </div>
+                    <button onclick="deleteTask(${task.id})" class="text-red-500 hover:text-red-700">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            return div;
+        }
+
+        // Task management functions
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                if (task.completed) {
+                    task.status = 'done';
+                }
+                saveTasks();
+                updateUI();
+            }
+        }
+
+        function moveTask(id, status) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.status = status;
+                task.completed = status === 'done';
+                saveTasks();
+                updateUI();
+            }
+        }
+
+        function deleteTask(id) {
+            if (confirm('このタスクを削除しますか？')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveTasks();
+                updateUI();
+                showNotification('タスクを削除しました', 'success');
+            }
+        }
+
+        // Utility functions
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function updateUI() {
+            // Update progress stats
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.completed).length;
+            const pending = total - completed;
+            
+            document.getElementById('totalTasks').textContent = total;
+            document.getElementById('completedTasks').textContent = completed;
+            document.getElementById('pendingTasks').textContent = pending;
+            
+            // Update current views
+            updateMatrix();
+            updateKanban();
+            updateCalendar();
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Set today's date as default
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('taskDate').value = today;
+        });
+    </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"95eef621ea7bdfdd","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.6.2","token":"4edd5f8ec12a48cfa682ab8261b80a79"}' crossorigin="anonymous"></script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDpO6rRfQH%2FQlgKgKRkaYXn%2Bry9sCjKnsZmppBFriVZ%2FOXkXkxpRGkanh6%2FV4pW0L0AASoQ8bj%2FG7bIWt8ehSpMpjVSNDozdCgZLwTPRVczJMPn3GWC3iRPMq2XsPYW%2F6it6PLTqwo%2BD5%2BfHmSS43q84xD2J0FGjLOrvmjjczlq5gAeKp4NvgT6bhq9iVEKkQR3NEuUV3tWwLdcmkeDffwIkgGrYuAAb9i81ti6B3rlkKHAl8PzNMq%2FvUHyZqGSAr4gKJygCsmJ43466QWHb3hSkRIzaFnSb%2Fj5mbSAsb7omHsQVAjo3gieuZPwe77T6w%2FtsiCuGhBRQUvuZef6I3YeK%2FAyrfLDMNLuUjfbj8Uc4uNklETZzY9Sm3faMwstgKO60J92J%2FjKPvn5ZnjYp68mFg3OCrFkBwWOGfNgo1wOozKJxOtTxNGbZqxm6LJucuvyrNpQtC7A0EJ6grLPIPvpE7MOw5aip1RHMuaeMw37bgGhJS%2BlgZna6lteXvVHgEuAS5%2F8m3LBIP33XyLEwov0w%3D";
+        window.__genspark_locale = "ja-JP";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDpO6rRfQH/QlgKgKRkaYXn+ry9sCjKnsZmppBFriVZ/OXkXkxpRGkanh6/V4pW0L0AASoQ8bj/G7bIWt8ehSpMpjVSNDozdCgZLwTPRVczJMPn3GWC3iRPMq2XsPYW/6it6PLTqwo+D5+fHmSS43q84xD2J0FGjLOrvmjjczlq5gAeKp4NvgT6bhq9iVEKkQR3NEuUV3tWwLdcmkeDffwIkgGrYuAAb9i81ti6B3rlkKHAl8PzNMq/vUHyZqGSAr4gKJygCsmJ43466QWHb3hSkRIzaFnSb/j5mbSAsb7omHsQVAjo3gieuZPwe77T6w/tsiCuGhBRQUvuZef6I3YeK/AyrfLDMNLuUjfbj8Uc4uNklETZzY9Sm3faMwstgKO60J92J/jKPvn5ZnjYp68mFg3OCrFkBwWOGfNgo1wOozKJxOtTxNGbZqxm6LJucuvyrNpQtC7A0EJ6grLPIPvpE7MOw5aip1RHMuaeMw37bgGhJS+lgZna6lteXvVHgEuAS5/8m3LBIP33XyLEwov0w=";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    
