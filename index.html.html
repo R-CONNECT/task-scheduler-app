@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
+<html lang="ja"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Task Manager</title>
@@ -21,7 +19,107 @@
         .urgent { background-color: #fef2f2; }
         .not-urgent { background-color: #f0f9ff; }
     </style>
-</head>
+<style>
+    .genspark-notice-dialog {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .genspark-notice-content {
+      background-color: white;
+      border-radius: 8px;
+      max-width: 600px;
+      width: 90%;
+      box-sizing: border-box;
+      padding: 10px 30px 30px 30px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      font-size: 16px;
+    }
+
+    .genspark-notice-title {
+      color: #000;
+      font-family: Arial;
+      font-size: 20px;
+      font-style: normal;
+      font-weight: 700;
+      line-height: 150%; 
+    }
+
+    .genspark-notice-list {
+      margin: 24px 0;
+      
+      color: #606366;
+      font-family: Arial;
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 150%;
+      padding-left: 12px;
+    }
+
+    .genspark-notice-list li {
+      margin-bottom: 12px;
+      list-style-type: disc;
+    }
+
+    .genspark-notice-list li a {
+      color: #606366;
+      text-decoration: underline;
+    }
+
+    .genspark-notice-checkbox {
+      display: flex;
+      align-items: center;
+      margin-top: 20px;
+      gap: 10px;
+
+      color: #232425;
+
+      font-family: Arial;
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: normal;
+    }
+
+    .genspark-notice-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+      
+    .genspark-notice-ok {
+      color: #232425;
+
+      text-align: center;
+      font-family: Arial;
+      font-size: 16px;
+      font-style: normal;
+      font-weight: 700;
+      line-height: 150%; 
+
+      cursor: pointer;
+      display: flex;
+      height: 40px;
+      padding: 6px 14px;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      align-self: stretch;
+      border-radius: 8px;
+      border: 1px solid #000;
+      box-sizing: border-box;
+      width: 100%;
+    }
+  </style></head>
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <header class="text-center mb-8">
@@ -57,7 +155,7 @@
                 <form id="taskForm" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">タスク名 *</label>
-                        <input type="text" id="taskName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="タスクを入力してください" required>
+                        <input type="text" id="taskName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="タスクを入力してください" required="">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">説明</label>
@@ -78,7 +176,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">重要度</label>
                             <select id="taskImportance" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="high">高</option>
-                                <option value="medium" selected>中</option>
+                                <option value="medium" selected="">中</option>
                                 <option value="low">低</option>
                             </select>
                         </div>
@@ -86,7 +184,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">緊急度</label>
                             <select id="taskUrgency" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="high">高</option>
-                                <option value="medium" selected>中</option>
+                                <option value="medium" selected="">中</option>
                                 <option value="low">低</option>
                             </select>
                         </div>
@@ -228,12 +326,12 @@
                     <button id="prevPeriod" class="bg-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-400">
                         <i class="fas fa-chevron-left"></i>
                     </button>
-                    <h4 id="currentPeriod" class="text-lg font-semibold text-gray-800"></h4>
+                    <h4 id="currentPeriod" class="text-lg font-semibold text-gray-800">2025年7月14日</h4>
                     <button id="nextPeriod" class="bg-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-400">
                         <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
-                <div id="calendarContent" class="min-h-96"></div>
+                <div id="calendarContent" class="min-h-96"><div class="space-y-2"><p class="text-gray-500 text-center py-8">この日に予定はありません</p></div></div>
             </div>
         </div>
     </div>
@@ -857,9 +955,9 @@
             document.getElementById('taskDate').value = today;
         });
     </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"95eef621ea7bdfdd","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.6.2","token":"4edd5f8ec12a48cfa682ab8261b80a79"}' crossorigin="anonymous"></script>
-</body>
-</html>
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon="{&quot;rayId&quot;:&quot;95eef621ea7bdfdd&quot;,&quot;serverTiming&quot;:{&quot;name&quot;:{&quot;cfExtPri&quot;:true,&quot;cfEdge&quot;:true,&quot;cfOrigin&quot;:true,&quot;cfL4&quot;:true,&quot;cfSpeedBrain&quot;:true,&quot;cfCacheStatus&quot;:true}},&quot;version&quot;:&quot;2025.6.2&quot;,&quot;token&quot;:&quot;4edd5f8ec12a48cfa682ab8261b80a79&quot;}" crossorigin="anonymous"></script>
+
+
     <script id="html_badge_script1">
         window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
             "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDpO6rRfQH%2FQlgKgKRkaYXn%2Bry9sCjKnsZmppBFriVZ%2FOXkXkxpRGkanh6%2FV4pW0L0AASoQ8bj%2FG7bIWt8ehSpMpjVSNDozdCgZLwTPRVczJMPn3GWC3iRPMq2XsPYW%2F6it6PLTqwo%2BD5%2BfHmSS43q84xD2J0FGjLOrvmjjczlq5gAeKp4NvgT6bhq9iVEKkQR3NEuUV3tWwLdcmkeDffwIkgGrYuAAb9i81ti6B3rlkKHAl8PzNMq%2FvUHyZqGSAr4gKJygCsmJ43466QWHb3hSkRIzaFnSb%2Fj5mbSAsb7omHsQVAjo3gieuZPwe77T6w%2FtsiCuGhBRQUvuZef6I3YeK%2FAyrfLDMNLuUjfbj8Uc4uNklETZzY9Sm3faMwstgKO60J92J%2FjKPvn5ZnjYp68mFg3OCrFkBwWOGfNgo1wOozKJxOtTxNGbZqxm6LJucuvyrNpQtC7A0EJ6grLPIPvpE7MOw5aip1RHMuaeMw37bgGhJS%2BlgZna6lteXvVHgEuAS5%2F8m3LBIP33XyLEwov0w%3D";
@@ -868,4 +966,4 @@
     </script>
     
     <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
-    
+    </body></html>
